@@ -527,6 +527,48 @@ PRODUCT_CSS = """
     @media (max-width: 640px) {
         .nm-product-grid, .nm-method-grid, .nm-flow-grid { grid-template-columns: 1fr; }
     }
+
+
+    .nm-top-brand {
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+        min-height: 2.55rem;
+        font-weight: 850;
+        letter-spacing: -.025em;
+        color: var(--nm-ink);
+        font-size: 1.02rem;
+        white-space: nowrap;
+    }
+
+    .nm-top-brand-mark {
+        width: 28px;
+        height: 28px;
+        border-radius: 9px;
+        background: linear-gradient(135deg, #5b6cff, #37b6c9);
+        box-shadow: 0 7px 18px rgba(91,108,255,.2);
+        flex: 0 0 auto;
+    }
+
+    div[data-testid="stPageLink"] a {
+        justify-content: center;
+        min-height: 2.55rem;
+        border: 1px solid #e2e7f0;
+        border-radius: 999px;
+        background: rgba(255,255,255,.92);
+        color: #33405c;
+        font-weight: 720;
+        text-decoration: none;
+        transition: all .15s ease;
+    }
+
+    div[data-testid="stPageLink"] a:hover {
+        border-color: #bfc8ff;
+        background: #f3f5ff;
+        color: #4453d8;
+        transform: translateY(-1px);
+    }
+
 </style>
 """
 
@@ -1264,6 +1306,38 @@ def methodology_system():
         )
         st.write("The web application performs inference only; it does not train or fine-tune models inside the user interface.")
 
+
+
+
+
+def render_top_navigation(items):
+    """Render a persistent horizontal product navigation bar."""
+    with st.container(border=True):
+        brand, *nav_cols = st.columns(
+            [1.25, 0.85, 1.15, 1.25, 0.95, 1.05, 0.75],
+            gap="small",
+            vertical_alignment="center",
+        )
+
+        with brand:
+            st.markdown(
+                """
+                <div class="nm-top-brand">
+                    <span class="nm-top-brand-mark"></span>
+                    <span>NewsMosaic</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        for column, (page, label, icon) in zip(nav_cols, items):
+            with column:
+                st.page_link(
+                    page,
+                    label=label,
+                    icon=icon,
+                    use_container_width=True,
+                )
 
 
 def render_sidebar_footer():
