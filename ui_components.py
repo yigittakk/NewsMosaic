@@ -1072,6 +1072,111 @@ def methodology_pipeline():
     )
 
 
+
+def methodology_data_strategy():
+    st.markdown(
+        """
+        <div class="nm-callout"><b>Dataset roles were kept separate.</b> Labeled external datasets were used to train and evaluate the supervised models, while CCNews was treated as the target news corpus. For theme adaptation, only a separate weakly labeled CCNews pool was used; the fixed final inference sample was excluded from that training pool.</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Dataset roles")
+    st.dataframe(
+        pd.DataFrame(
+            [
+                {
+                    "Task": "Theme classification",
+                    "Dataset": "HuffPost + IAB-derived external theme data",
+                    "Role": "Gold supervised training / validation / test",
+                    "What we did": "Mapped source labels into the final NewsMosaic theme taxonomy, removed unusable rows, created fixed splits, and used the held-out test set only for final evaluation.",
+                },
+                {
+                    "Task": "Theme classification",
+                    "Dataset": "CCNews 2020–2024 weak-label pool",
+                    "Role": "Target-domain adaptation",
+                    "What we did": "Generated conservative weak theme labels from metadata such as categories and tags, removed ambiguous rows, balanced the weak set, and combined it with external gold training data for the final joint RoBERTa model.",
+                },
+                {
+                    "Task": "Linguistic bias",
+                    "Dataset": "BABE",
+                    "Role": "Supervised fine-tuning / primary evaluation",
+                    "What we did": "Fine-tuned ModernBERT on annotated sentence-level bias labels, evaluated on held-out BABE data, and calibrated the sentence decision threshold on validation data only.",
+                },
+                {
+                    "Task": "Linguistic bias",
+                    "Dataset": "MBIC",
+                    "Role": "External robustness check",
+                    "What we did": "Used as an additional out-of-dataset evaluation set to check whether the bias model generalized beyond BABE. It was not used to fit the final model.",
+                },
+                {
+                    "Task": "Named entity recognition",
+                    "Dataset": "CoNLL-2003",
+                    "Role": "Supervised fine-tuning / evaluation",
+                    "What we did": "Fine-tuned bert-base-cased for token classification and evaluated entity extraction for PER, ORG, LOC, and MISC labels on held-out CoNLL data.",
+                },
+                {
+                    "Task": "All three tasks",
+                    "Dataset": "Fixed CCNews reference corpus",
+                    "Role": "Target inference / research analysis",
+                    "What we did": "Applied the already selected models to a fixed 125,000-article sample (25,000 per year, 2020–2024). These outputs are model estimates, not ground-truth labels.",
+                },
+            ]
+        ),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+    st.markdown("#### Theme data preparation")
+    left, right = st.columns(2)
+    with left:
+        st.markdown(
+            """
+            **External gold dataset**
+
+            - Final prepared dataset: **316,697 articles**
+            - Train: **253,357**
+            - Validation: **31,670**
+            - Test: **31,670**
+            - Content leakage check: **PASS**
+            - External test data remained untouched during training and threshold calibration.
+            """
+        )
+    with right:
+        st.markdown(
+            """
+            **Target-domain weak supervision**
+
+            - CCNews metadata was used only for conservative weak labeling.
+            - The fixed final 125k inference corpus was excluded by exact-content hash.
+            - Clean weak-label pool: **112,610 articles**
+            - Balanced weak training subset: **53,551 articles**
+            - The final model used **gold external training data + weak CCNews training data**.
+            """
+        )
+
+    st.markdown(
+        """
+        <div class="nm-note"><b>Why this matters.</b> CCNews is the domain being studied, not a fully labeled benchmark. Keeping the final 125k reference corpus outside the adaptation set prevents the application from reporting training-set predictions as if they were independent research results.</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("#### Final model-selection logic")
+    st.markdown(
+        """
+        1. **Train on labeled data.** Each task began with an external supervised dataset appropriate to the task.
+        2. **Evaluate on held-out data.** Model selection used validation/test metrics rather than CCNews output distributions.
+        3. **Adapt theme classification cautiously.** A sequential weak-adaptation experiment improved target behavior but degraded external performance, so it was rejected.
+        4. **Use the joint theme model.** The selected RoBERTa model combined external gold data with weak CCNews data and preserved external performance much better.
+        5. **Freeze models before corpus analysis.** The final Theme, Bias, and NER models were then applied to the fixed CCNews sample without further training.
+        """
+    )
+
+    st.caption(
+        "Thresholds are calibrated decision rules, not guarantees of accuracy on CCNews. The theme confidence threshold was calibrated on external validation data; the bias threshold was calibrated on BABE validation data."
+    )
+
 def methodology_models():
     st.markdown(
         f"""

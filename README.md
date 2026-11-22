@@ -14,7 +14,7 @@ NewsMosaic uses Streamlit's native multipage navigation rather than a tab-based 
 - **Single Article** — paste one article and run Theme + Bias + NER.
 - **Corpus Analysis** — upload, validate, analyse, and export a CSV corpus.
 - **Dashboard** — explore the latest analysed corpus without rerunning the models.
-- **Methodology** — processing pipeline, model cards, interpretation guidance, and system design.
+- **Methodology** — processing pipeline, dataset/training strategy, model cards, interpretation guidance, and system design.
 - **About** — developer information, academic context, project scope, and repository links.
 
 ## Core workflow
@@ -36,6 +36,23 @@ Model repositories:
 - Theme: <https://huggingface.co/yigittoud/newsmosaic-theme>
 - Bias: <https://huggingface.co/yigittoud/newsmosaic-bias>
 - NER: <https://huggingface.co/yigittoud/newsmosaic-ner>
+
+## Training and dataset strategy
+
+The deployed models were trained and evaluated on labeled external datasets, while **CCNews 2020–2024** is primarily the target corpus for research analysis. Dataset roles were kept separate to avoid treating model-generated CCNews labels as supervised ground truth.
+
+| Task | Dataset | Role | Treatment |
+|---|---|---|---|
+| Theme | HuffPost + IAB-derived external theme data | Gold supervised training / validation / test | Labels were harmonized into the NewsMosaic theme taxonomy and fixed train/validation/test splits were created. |
+| Theme | Separate CCNews weak-label pool | Target-domain adaptation | Conservative labels were generated from metadata such as categories and tags. The fixed final inference corpus was excluded by exact-content hash. |
+| Bias | BABE | Fine-tuning / primary evaluation | ModernBERT was fine-tuned on sentence-level annotations; the decision threshold was calibrated on validation data only. |
+| Bias | MBIC | External robustness evaluation | Used to test out-of-dataset generalization; not used to fit the final model. |
+| NER | CoNLL-2003 | Fine-tuning / evaluation | `bert-base-cased` was fine-tuned for PER / ORG / LOC / MISC token classification. |
+| All tasks | Fixed CCNews reference corpus | Final target inference | 125,000 articles, balanced at 25,000 per year from 2020–2024, were analysed only after model selection. |
+
+For Theme classification, the final prepared external dataset contained **316,697** examples (253,357 train / 31,670 validation / 31,670 test). A separate weakly labeled CCNews pool produced **112,610** clean examples and was balanced to **53,551** examples for joint target-domain adaptation. A sequential adaptation experiment was rejected because it degraded external performance; the deployed model instead uses joint training with external gold data and weak CCNews data.
+
+The final CCNews outputs are therefore **model estimates**, not human gold labels. Thresholds control decision/uncertainty behaviour and do not guarantee a fixed accuracy on CCNews.
 
 ## Dashboard design
 
@@ -208,3 +225,9 @@ Machine Learning for Humanities · 2026
 
 GitHub: <https://github.com/yigittakk>  
 Repository: <https://github.com/yigittakk/NewsMosaic>
+
+
+## Navigation
+
+NewsMosaic uses Streamlit's native top navigation. The main pages are available directly from the horizontal menu: Home, Single Article, Corpus Analysis, Dashboard, Methodology, and About. The sidebar is optional and contains developer and online-demo information only.
+
