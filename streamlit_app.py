@@ -1,7 +1,10 @@
+import html
 import json
 from collections import Counter
 
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from config import Config
@@ -19,86 +22,259 @@ st.set_page_config(
 
 CUSTOM_CSS = """
 <style>
+    :root {
+        --nm-ink: #17213a;
+        --nm-muted: #667085;
+        --nm-border: #e6eaf2;
+        --nm-card: #ffffff;
+        --nm-bg: #f7f9fd;
+        --nm-blue: #5b6cff;
+        --nm-cyan: #37b6c9;
+        --nm-violet: #8a67d5;
+        --nm-peach: #f4a261;
+    }
+
+    .stApp {
+        background:
+            radial-gradient(circle at 8% 0%, rgba(91,108,255,.08), transparent 24rem),
+            radial-gradient(circle at 95% 12%, rgba(55,182,201,.07), transparent 24rem),
+            var(--nm-bg);
+        color: var(--nm-ink);
+    }
+
     .block-container {
-        max-width: 1240px;
-        padding-top: 2rem;
-        padding-bottom: 3rem;
+        max-width: 1380px;
+        padding-top: 1.35rem;
+        padding-bottom: 4rem;
     }
 
     [data-testid="stSidebar"] {
-        border-right: 1px solid rgba(128, 128, 128, 0.18);
+        background: #ffffff;
+        border-right: 1px solid var(--nm-border);
+    }
+
+    [data-testid="stSidebar"] .block-container {
+        padding-top: 1.25rem;
+    }
+
+    .nm-brand {
+        display: flex;
+        gap: .7rem;
+        align-items: center;
+        margin-bottom: .2rem;
+    }
+
+    .nm-logo {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #5b6cff, #37b6c9);
+        box-shadow: 0 8px 22px rgba(91,108,255,.22);
+    }
+
+    .nm-brand-name {
+        font-weight: 800;
+        font-size: 1.16rem;
+        letter-spacing: -.02em;
+        color: var(--nm-ink);
     }
 
     .nm-hero {
-        padding: 1.5rem 1.6rem;
-        border: 1px solid rgba(128, 128, 128, 0.20);
-        border-radius: 18px;
-        margin-bottom: 1.1rem;
-        background: linear-gradient(135deg, rgba(81, 99, 255, 0.10), rgba(0, 180, 170, 0.06));
+        position: relative;
+        overflow: hidden;
+        padding: 2.05rem 2.15rem;
+        border: 1px solid #e8ebf4;
+        border-radius: 24px;
+        margin-bottom: 1.2rem;
+        background: linear-gradient(115deg, #ffffff 0%, #f4f6ff 62%, #eefafc 100%);
+        box-shadow: 0 18px 55px rgba(31, 42, 68, .07);
+    }
+
+    .nm-hero::after {
+        content: "";
+        position: absolute;
+        width: 260px;
+        height: 260px;
+        right: -85px;
+        top: -100px;
+        border-radius: 50%;
+        background: linear-gradient(145deg, rgba(91,108,255,.17), rgba(55,182,201,.05));
     }
 
     .nm-kicker {
-        font-size: 0.78rem;
-        letter-spacing: 0.12em;
+        color: #5b6cff;
+        font-size: .76rem;
+        letter-spacing: .15em;
         text-transform: uppercase;
-        font-weight: 700;
-        opacity: 0.72;
-        margin-bottom: 0.35rem;
+        font-weight: 800;
+        margin-bottom: .45rem;
     }
 
     .nm-hero h1 {
+        color: var(--nm-ink);
         margin: 0;
         padding: 0;
-        font-size: 2.35rem;
-        line-height: 1.05;
+        font-size: clamp(2.25rem, 5vw, 3.45rem);
+        line-height: .98;
+        letter-spacing: -.055em;
     }
 
     .nm-hero p {
-        margin: 0.7rem 0 0 0;
-        max-width: 800px;
-        opacity: 0.82;
+        color: #5f6b82;
+        margin: .9rem 0 0 0;
+        max-width: 790px;
         font-size: 1.02rem;
+        line-height: 1.65;
+    }
+
+    .nm-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .45rem;
+        margin-top: 1.05rem;
+    }
+
+    .nm-badge {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: .32rem .68rem;
+        background: rgba(255,255,255,.82);
+        border: 1px solid #e2e6f2;
+        color: #46516b;
+        font-size: .78rem;
+        font-weight: 650;
+    }
+
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        gap: .35rem;
+        background: rgba(255,255,255,.82);
+        border: 1px solid var(--nm-border);
+        border-radius: 14px;
+        padding: .28rem;
+        width: fit-content;
+        box-shadow: 0 7px 24px rgba(31,42,68,.04);
+    }
+
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        border-radius: 10px;
+        padding-left: 1rem;
+        padding-right: 1rem;
+        color: #697386;
+        font-weight: 650;
+    }
+
+    [data-testid="stTabs"] [aria-selected="true"] {
+        background: #eef1ff;
+        color: #4454e8;
     }
 
     div[data-testid="stMetric"] {
-        border: 1px solid rgba(128, 128, 128, 0.18);
-        border-radius: 14px;
-        padding: 0.8rem 0.9rem;
-        background: rgba(128, 128, 128, 0.035);
+        background: var(--nm-card);
+        border: 1px solid var(--nm-border);
+        border-radius: 16px;
+        padding: 1rem 1rem .9rem 1rem;
+        box-shadow: 0 8px 25px rgba(31,42,68,.045);
+        min-height: 116px;
+    }
+
+    div[data-testid="stMetric"] label {
+        color: #768197 !important;
+        font-size: .78rem !important;
+        font-weight: 700 !important;
+        letter-spacing: .02em;
+    }
+
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: var(--nm-ink);
+        font-weight: 790;
+        letter-spacing: -.035em;
     }
 
     div[data-testid="stDataFrame"] {
-        border: 1px solid rgba(128, 128, 128, 0.15);
-        border-radius: 12px;
+        background: #fff;
+        border: 1px solid var(--nm-border);
+        border-radius: 14px;
         overflow: hidden;
+        box-shadow: 0 8px 25px rgba(31,42,68,.035);
     }
 
     .nm-section {
-        margin-top: 1.4rem;
-        margin-bottom: 0.45rem;
+        margin-top: 1.75rem;
+        margin-bottom: .55rem;
+        color: var(--nm-ink);
         font-size: 1.1rem;
-        font-weight: 700;
+        font-weight: 800;
+        letter-spacing: -.015em;
     }
 
-    .nm-muted {
-        opacity: 0.72;
-        font-size: 0.9rem;
+    .nm-eyebrow {
+        color: #6f7b91;
+        font-size: .76rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        margin-bottom: .25rem;
+    }
+
+    .nm-panel {
+        background: #ffffff;
+        border: 1px solid var(--nm-border);
+        border-radius: 18px;
+        padding: 1.05rem 1.15rem;
+        box-shadow: 0 8px 25px rgba(31,42,68,.035);
+    }
+
+    .nm-note {
+        padding: .9rem 1rem;
+        border-radius: 14px;
+        background: #f0f5ff;
+        border: 1px solid #dfe7ff;
+        color: #4b5874;
+        font-size: .9rem;
+        line-height: 1.55;
     }
 
     .nm-pill {
         display: inline-block;
-        padding: 0.22rem 0.55rem;
+        padding: .27rem .62rem;
         border-radius: 999px;
-        border: 1px solid rgba(128, 128, 128, 0.22);
-        margin: 0.1rem 0.2rem 0.1rem 0;
-        font-size: 0.86rem;
+        background: #f3f5fb;
+        border: 1px solid #e4e8f2;
+        color: #45516a;
+        margin: .12rem .24rem .12rem 0;
+        font-size: .84rem;
+        font-weight: 620;
     }
 
     div.stButton > button,
     div.stDownloadButton > button {
-        border-radius: 10px;
+        border-radius: 12px;
         min-height: 2.8rem;
-        font-weight: 650;
+        font-weight: 720;
+        border: 1px solid #dfe3ee;
+    }
+
+    div.stButton > button[kind="primary"] {
+        background: linear-gradient(100deg, #5b6cff, #6676ff);
+        border: none;
+        box-shadow: 0 9px 20px rgba(91,108,255,.21);
+    }
+
+    [data-testid="stFileUploaderDropzone"] {
+        background: #ffffff;
+        border: 1.5px dashed #cad2e5;
+        border-radius: 16px;
+    }
+
+    [data-testid="stExpander"] {
+        background: #ffffff;
+        border: 1px solid var(--nm-border);
+        border-radius: 14px;
+    }
+
+    hr {
+        border-color: #e8ebf2 !important;
     }
 </style>
 """
@@ -117,39 +293,100 @@ def get_corpus_analyzer():
 
 
 def pretty_label(value):
-    if value is None:
+    if value is None or pd.isna(value):
         return "N/A"
     return str(value).replace("_", " ").title()
 
 
 def show_entity_chips(title, entities):
     st.markdown(f"**{title}**")
-
     if not entities:
         st.caption("No entities detected.")
         return
-
     chips = "".join(
-        f'<span class="nm-pill">{entity}</span>'
-        for entity in entities
+        f'<span class="nm-pill">{html.escape(str(entity))}</span>' for entity in entities
     )
     st.markdown(chips, unsafe_allow_html=True)
 
 
+def parse_entities(value):
+    if pd.isna(value) or not str(value).strip():
+        return []
+    return [item.strip() for item in str(value).split(" | ") if item.strip()]
+
+
+def get_top_entities(series, limit=12):
+    counter = Counter()
+    for value in series.dropna():
+        counter.update(parse_entities(value))
+    return counter.most_common(limit)
+
+
+def find_column(dataframe, candidates):
+    lower_map = {str(column).lower(): column for column in dataframe.columns}
+    for candidate in candidates:
+        if candidate in lower_map:
+            return lower_map[candidate]
+    return None
+
+
+def derive_year(dataframe):
+    year_column = find_column(dataframe, ["year", "analysis_year"])
+    if year_column is not None:
+        year = pd.to_numeric(dataframe[year_column], errors="coerce")
+        return year.where(year.between(1900, 2100))
+
+    date_column = find_column(
+        dataframe,
+        ["date", "published_date", "publication_date", "published", "datetime", "timestamp"],
+    )
+    if date_column is None:
+        return pd.Series(pd.NA, index=dataframe.index, dtype="Float64")
+
+    dates = pd.to_datetime(dataframe[date_column], errors="coerce")
+    return dates.dt.year
+
+
+def plotly_config():
+    return {
+        "displaylogo": False,
+        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+        "responsive": True,
+    }
+
+
+def polish_figure(fig, height=380, legend=True):
+    fig.update_layout(
+        template="plotly_white",
+        height=height,
+        margin=dict(l=16, r=16, t=42, b=18),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Arial, sans-serif", color="#45516a", size=12),
+        title_font=dict(color="#17213a", size=15),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="left",
+            x=0,
+            title=None,
+        ),
+        showlegend=legend,
+    )
+    fig.update_xaxes(showgrid=True, gridcolor="#edf0f6", zeroline=False)
+    fig.update_yaxes(showgrid=False, zeroline=False)
+    return fig
+
+
 def show_single_article_results(result):
     st.markdown('<div class="nm-section">Analysis summary</div>', unsafe_allow_html=True)
-
     col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric("Theme", pretty_label(result["theme"]))
-    with col2:
-        st.metric("Theme confidence", f'{result["theme_confidence"]:.1%}')
-    with col3:
-        bias_value = result["mean_bias_probability"]
-        st.metric("Mean bias probability", f"{bias_value:.1%}" if bias_value is not None else "N/A")
-    with col4:
-        st.metric("Unique entities", result["ner_entity_count"])
+    col1.metric("Theme", pretty_label(result["theme"]))
+    col2.metric("Theme confidence", f'{result["theme_confidence"]:.1%}')
+    bias_value = result["mean_bias_probability"]
+    col3.metric("Mean bias probability", f"{bias_value:.1%}" if bias_value is not None else "N/A")
+    col4.metric("Unique entities", result["ner_entity_count"])
 
     if result["theme_uncertain"]:
         st.warning(
@@ -160,18 +397,17 @@ def show_single_article_results(result):
         st.success("Theme prediction is above the calibrated confidence threshold.")
 
     left, right = st.columns([1, 1])
-
     with left:
         st.markdown('<div class="nm-section">Linguistic bias</div>', unsafe_allow_html=True)
         b1, b2 = st.columns(2)
-        with b1:
-            bias_ratio = result["bias_ratio"]
-            st.metric("Bias ratio", f"{bias_ratio:.1%}" if bias_ratio is not None else "N/A")
-        with b2:
-            st.metric("Analyzed sentences", result["bias_sentence_count"])
-        st.caption(
-            "Bias Ratio is the share of analyzed sentences with predicted bias "
-            f"probability ≥ {Config.BIAS_THRESHOLD}."
+        bias_ratio = result["bias_ratio"]
+        b1.metric("Bias ratio", f"{bias_ratio:.1%}" if bias_ratio is not None else "N/A")
+        b2.metric("Analyzed sentences", result["bias_sentence_count"])
+        st.markdown(
+            f'<div class="nm-note">Bias Ratio is the share of analyzed sentences with predicted '
+            f'bias probability ≥ {Config.BIAS_THRESHOLD}. It is a model-estimated linguistic signal, '
+            f'not a factual judgment about the publisher.</div>',
+            unsafe_allow_html=True,
         )
 
     with right:
@@ -204,205 +440,436 @@ def show_single_article_results(result):
     )
 
 
-def get_top_entities(series, limit=10):
-    counter = Counter()
+def prepare_dashboard_frame(result):
+    analyzed = result[result["analysis_status"] == "analyzed"].copy()
+    if analyzed.empty:
+        return analyzed
 
-    for value in series.dropna():
-        for entity in str(value).split(" | "):
-            entity = entity.strip()
-            if entity:
-                counter[entity] += 1
+    analyzed["_theme"] = analyzed["predicted_theme"].map(pretty_label)
+    analyzed["_confidence"] = pd.to_numeric(analyzed["theme_confidence"], errors="coerce")
+    analyzed["_bias"] = pd.to_numeric(analyzed["mean_bias_probability"], errors="coerce")
+    analyzed["_entity_count"] = pd.to_numeric(analyzed["ner_entity_count"], errors="coerce").fillna(0)
+    analyzed["_uncertain"] = analyzed["theme_uncertain"].fillna(False).astype(bool)
+    analyzed["_year"] = derive_year(analyzed)
 
-    return counter.most_common(limit)
+    source_column = find_column(analyzed, ["source", "publisher", "sitename", "news_source"])
+    analyzed["_source"] = (
+        analyzed[source_column].fillna("Unknown").astype(str)
+        if source_column is not None
+        else "Unknown"
+    )
+
+    title_column = find_column(analyzed, ["title", "headline", "article_title"])
+    if title_column is not None:
+        analyzed["_title"] = analyzed[title_column].fillna("Untitled").astype(str)
+    else:
+        analyzed["_title"] = [f"Article {i + 1}" for i in range(len(analyzed))]
+
+    return analyzed
 
 
-def show_top_entities(title, values):
-    st.markdown(f"**{title}**")
+def apply_dashboard_filters(analyzed):
+    st.markdown('<div class="nm-section">Explore the corpus</div>', unsafe_allow_html=True)
+    with st.expander("Dashboard filters", expanded=True):
+        f1, f2, f3 = st.columns(3)
 
-    if not values:
-        st.caption("No entities detected.")
-        return
+        themes = sorted(analyzed["_theme"].dropna().unique().tolist())
+        selected_themes = f1.multiselect(
+            "Theme",
+            themes,
+            placeholder="All themes",
+        )
 
-    entity_table = pd.DataFrame(values, columns=["Entity", "Articles"])
-    st.dataframe(entity_table, hide_index=True, use_container_width=True)
+        years = sorted(int(year) for year in analyzed["_year"].dropna().unique())
+        selected_years = f2.multiselect(
+            "Year",
+            years,
+            placeholder="All years",
+        ) if years else []
 
+        sources = sorted(analyzed["_source"].dropna().unique().tolist())
+        selected_sources = f3.multiselect(
+            "Source",
+            sources,
+            placeholder="All sources",
+        )
 
-def find_date_column(dataframe):
-    likely_columns = [
-        "date",
-        "published_date",
-        "publication_date",
-        "published",
-        "datetime",
-        "timestamp",
+        f4, f5, f6 = st.columns(3)
+        confidence_range = f4.slider(
+            "Theme confidence",
+            min_value=0.0,
+            max_value=1.0,
+            value=(0.0, 1.0),
+            step=0.05,
+        )
+        bias_range = f5.slider(
+            "Mean bias probability",
+            min_value=0.0,
+            max_value=1.0,
+            value=(0.0, 1.0),
+            step=0.05,
+        )
+        certainty = f6.selectbox(
+            "Theme certainty",
+            ["All", "Certain only", "Uncertain only"],
+        )
+
+    filtered = analyzed.copy()
+    if selected_themes:
+        filtered = filtered[filtered["_theme"].isin(selected_themes)]
+    if selected_years:
+        filtered = filtered[filtered["_year"].isin(selected_years)]
+    if selected_sources:
+        filtered = filtered[filtered["_source"].isin(selected_sources)]
+
+    filtered = filtered[
+        filtered["_confidence"].between(confidence_range[0], confidence_range[1], inclusive="both")
+        & filtered["_bias"].between(bias_range[0], bias_range[1], inclusive="both")
     ]
 
-    lower_map = {str(column).lower(): column for column in dataframe.columns}
+    if certainty == "Certain only":
+        filtered = filtered[~filtered["_uncertain"]]
+    elif certainty == "Uncertain only":
+        filtered = filtered[filtered["_uncertain"]]
 
-    for candidate in likely_columns:
-        if candidate in lower_map:
-            return lower_map[candidate]
-
-    return None
+    st.caption(f"Showing {len(filtered)} of {len(analyzed)} analyzed articles.")
+    return filtered
 
 
-def show_time_trends(analyzed):
-    date_column = find_date_column(analyzed)
-
-    if date_column is None:
+def show_kpis(filtered):
+    if filtered.empty:
         return
 
-    dates = pd.to_datetime(analyzed[date_column], errors="coerce")
-    valid_dates = dates.notna()
+    theme_counts = filtered["_theme"].value_counts()
+    most_common_theme = theme_counts.index[0]
+    coverage = 1 - filtered["_uncertain"].mean()
+    mean_confidence = filtered["_confidence"].mean()
+    mean_bias = filtered["_bias"].mean()
+    entity_total = filtered["_entity_count"].sum()
 
-    if valid_dates.sum() < 2:
-        return
+    row1 = st.columns(4)
+    row1[0].metric("Articles", len(filtered))
+    row1[1].metric("Leading theme", most_common_theme)
+    row1[2].metric("Theme coverage", f"{coverage:.1%}")
+    row1[3].metric("Mean confidence", f"{mean_confidence:.1%}")
 
-    trend_data = analyzed.loc[valid_dates].copy()
-    trend_data["_year"] = dates.loc[valid_dates].dt.year.values
+    row2 = st.columns(4)
+    row2[0].metric("Average bias", f"{mean_bias:.1%}")
+    row2[1].metric("Uncertain themes", int(filtered["_uncertain"].sum()))
+    row2[2].metric("Unique entity mentions", int(entity_total))
+    row2[3].metric("Entities / article", f"{entity_total / len(filtered):.1f}")
 
-    if trend_data["_year"].nunique() < 2:
-        return
 
-    st.markdown('<div class="nm-section">Time trends</div>', unsafe_allow_html=True)
-    st.caption(f"Detected date column: {date_column}")
+def show_theme_visuals(filtered):
+    left, right = st.columns([1.55, 1])
 
-    trend_col1, trend_col2 = st.columns(2)
-
-    with trend_col1:
-        yearly_articles = trend_data.groupby("_year").size().rename("Articles")
-        st.markdown("**Articles by year**")
-        st.bar_chart(yearly_articles)
-
-    with trend_col2:
-        trend_data["mean_bias_probability"] = pd.to_numeric(
-            trend_data["mean_bias_probability"], errors="coerce"
+    with left:
+        theme_stats = (
+            filtered.groupby("_theme", as_index=False)
+            .agg(Articles=("_theme", "size"), MeanConfidence=("_confidence", "mean"))
+            .sort_values("Articles", ascending=True)
         )
-        yearly_bias = trend_data.groupby("_year")["mean_bias_probability"].mean().dropna()
-        st.markdown("**Average bias probability by year**")
-        if yearly_bias.empty:
-            st.caption("No valid bias values available for the detected dates.")
-        else:
-            st.line_chart(yearly_bias)
+        fig = px.bar(
+            theme_stats,
+            x="Articles",
+            y="_theme",
+            orientation="h",
+            color="_theme",
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            custom_data=["MeanConfidence"],
+            labels={"_theme": "Theme"},
+            title="Theme distribution",
+        )
+        fig.update_traces(
+            hovertemplate="<b>%{y}</b><br>Articles: %{x}<br>Mean confidence: %{customdata[0]:.1%}<extra></extra>"
+        )
+        fig.update_layout(yaxis_title=None, xaxis_title="Articles")
+        polish_figure(fig, height=max(360, 34 * len(theme_stats) + 120), legend=False)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+    with right:
+        certain_count = int((~filtered["_uncertain"]).sum())
+        uncertain_count = int(filtered["_uncertain"].sum())
+        certainty_frame = pd.DataFrame(
+            {"Status": ["Above threshold", "Below threshold"], "Articles": [certain_count, uncertain_count]}
+        )
+        fig = px.pie(
+            certainty_frame,
+            names="Status",
+            values="Articles",
+            hole=.68,
+            color="Status",
+            color_discrete_map={"Above threshold": "#5b6cff", "Below threshold": "#f4a261"},
+            title="Theme confidence coverage",
+        )
+        fig.update_traces(textposition="inside", textinfo="percent", hovertemplate="%{label}<br>%{value} articles<extra></extra>")
+        fig.add_annotation(
+            text=f"<b>{certain_count / len(filtered):.0%}</b><br><span style='font-size:11px'>coverage</span>",
+            x=.5,
+            y=.5,
+            showarrow=False,
+            font=dict(color="#17213a", size=20),
+        )
+        polish_figure(fig, height=390, legend=True)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+
+def show_bias_visuals(filtered):
+    left, right = st.columns([1.2, 1])
+
+    with left:
+        fig = px.histogram(
+            filtered,
+            x="_bias",
+            nbins=12,
+            color_discrete_sequence=["#37b6c9"],
+            labels={"_bias": "Mean bias probability"},
+            title="Bias score distribution",
+        )
+        mean_bias = filtered["_bias"].mean()
+        fig.add_vline(
+            x=mean_bias,
+            line_dash="dash",
+            line_color="#5b6cff",
+            annotation_text=f"Mean {mean_bias:.1%}",
+            annotation_position="top right",
+        )
+        fig.update_xaxes(tickformat=".0%", range=[0, 1])
+        fig.update_layout(yaxis_title="Articles")
+        polish_figure(fig, height=360, legend=False)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+    with right:
+        theme_bias = (
+            filtered.groupby("_theme", as_index=False)
+            .agg(MeanBias=("_bias", "mean"), Articles=("_theme", "size"))
+            .sort_values("MeanBias", ascending=False)
+        )
+        fig = px.bar(
+            theme_bias,
+            x="_theme",
+            y="MeanBias",
+            color="_theme",
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            custom_data=["Articles"],
+            labels={"_theme": "Theme", "MeanBias": "Mean bias probability"},
+            title="Average bias by theme",
+        )
+        fig.update_traces(hovertemplate="<b>%{x}</b><br>Mean bias: %{y:.1%}<br>Articles: %{customdata[0]}<extra></extra>")
+        fig.update_yaxes(tickformat=".0%", range=[0, max(.25, min(1.0, theme_bias["MeanBias"].max() * 1.25))])
+        fig.update_xaxes(tickangle=-35)
+        polish_figure(fig, height=360, legend=False)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+
+def show_time_visuals(filtered):
+    trend = filtered.dropna(subset=["_year"]).copy()
+    if trend.empty or trend["_year"].nunique() < 2:
+        return
+
+    trend["_year"] = trend["_year"].astype(int)
+    st.markdown('<div class="nm-section">Time trends</div>', unsafe_allow_html=True)
+
+    left, right = st.columns([1.45, 1])
+    with left:
+        theme_year = (
+            trend.groupby(["_year", "_theme"]).size().rename("Articles").reset_index()
+        )
+        theme_year["Share"] = theme_year.groupby("_year")["Articles"].transform(lambda s: s / s.sum())
+        fig = px.bar(
+            theme_year,
+            x="_year",
+            y="Share",
+            color="_theme",
+            color_discrete_sequence=px.colors.qualitative.Pastel,
+            labels={"_year": "Year", "_theme": "Theme"},
+            title="Theme mix by year",
+            custom_data=["Articles"],
+        )
+        fig.update_traces(hovertemplate="%{fullData.name}<br>Share: %{y:.1%}<br>Articles: %{customdata[0]}<extra></extra>")
+        fig.update_yaxes(tickformat=".0%", range=[0, 1])
+        polish_figure(fig, height=420, legend=True)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+    with right:
+        yearly = (
+            trend.groupby("_year", as_index=False)
+            .agg(MeanBias=("_bias", "mean"), MeanConfidence=("_confidence", "mean"), Articles=("_year", "size"))
+        )
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=yearly["_year"],
+                y=yearly["MeanBias"],
+                mode="lines+markers",
+                name="Bias",
+                line=dict(color="#37b6c9", width=3),
+                marker=dict(size=8),
+                customdata=yearly[["Articles"]],
+                hovertemplate="Year %{x}<br>Bias: %{y:.1%}<br>Articles: %{customdata[0]}<extra></extra>",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=yearly["_year"],
+                y=yearly["MeanConfidence"],
+                mode="lines+markers",
+                name="Theme confidence",
+                line=dict(color="#5b6cff", width=3),
+                marker=dict(size=8),
+                hovertemplate="Year %{x}<br>Confidence: %{y:.1%}<extra></extra>",
+            )
+        )
+        fig.update_yaxes(tickformat=".0%", range=[0, 1])
+        fig.update_layout(title="Model signals by year")
+        polish_figure(fig, height=420, legend=True)
+        st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+
+def show_entity_visuals(filtered):
+    st.markdown('<div class="nm-section">Entity prominence</div>', unsafe_allow_html=True)
+    person_tab, org_tab, loc_tab = st.tabs(["Persons", "Organizations", "Locations"])
+
+    for tab, column, title, color in [
+        (person_tab, "persons", "Top persons", "#5b6cff"),
+        (org_tab, "organizations", "Top organizations", "#8a67d5"),
+        (loc_tab, "locations", "Top locations", "#37b6c9"),
+    ]:
+        with tab:
+            values = get_top_entities(filtered[column], limit=15)
+            if not values:
+                st.caption("No entities detected in the current filter selection.")
+                continue
+            frame = pd.DataFrame(values, columns=["Entity", "Articles"]).sort_values("Articles")
+            fig = px.bar(
+                frame,
+                x="Articles",
+                y="Entity",
+                orientation="h",
+                color_discrete_sequence=[color],
+                title=title,
+            )
+            fig.update_traces(hovertemplate="<b>%{y}</b><br>Articles: %{x}<extra></extra>")
+            polish_figure(fig, height=max(340, 29 * len(frame) + 100), legend=False)
+            st.plotly_chart(fig, use_container_width=True, config=plotly_config())
+
+
+def show_article_explorer(filtered):
+    st.markdown('<div class="nm-section">Article explorer</div>', unsafe_allow_html=True)
+    if filtered.empty:
+        return
+
+    explorer = filtered.copy()
+    explorer["_article_label"] = [
+        f"{idx + 1:02d} · {title[:95]}" for idx, title in enumerate(explorer["_title"].tolist())
+    ]
+    selected_label = st.selectbox("Open an article", explorer["_article_label"].tolist())
+    row = explorer.loc[explorer["_article_label"] == selected_label].iloc[0]
+
+    a, b, c, d = st.columns(4)
+    a.metric("Theme", row["_theme"])
+    b.metric("Confidence", f'{row["_confidence"]:.1%}')
+    c.metric("Bias", f'{row["_bias"]:.1%}')
+    d.metric("Entities", int(row["_entity_count"]))
+
+    meta_bits = []
+    if pd.notna(row["_year"]):
+        meta_bits.append(str(int(row["_year"])))
+    if row["_source"] != "Unknown":
+        meta_bits.append(row["_source"])
+    if meta_bits:
+        st.caption(" · ".join(meta_bits))
+
+    l, r = st.columns([1.05, 1])
+    with l:
+        show_entity_chips("Persons", parse_entities(row.get("persons")))
+        show_entity_chips("Organizations", parse_entities(row.get("organizations")))
+    with r:
+        show_entity_chips("Locations", parse_entities(row.get("locations")))
+        show_entity_chips("Miscellaneous", parse_entities(row.get("misc_entities")))
+
+    text_column = find_column(
+        filtered,
+        ["text", "plain_text", "article", "article_text", "content"],
+    )
+    if text_column is not None:
+        with st.expander("Read article text", expanded=False):
+            st.write(str(row[text_column]))
 
 
 def show_corpus_dashboard(result):
-    analyzed = result[result["analysis_status"] == "analyzed"].copy()
-
+    analyzed = prepare_dashboard_frame(result)
     if analyzed.empty:
         st.warning("No valid articles were analyzed.")
         return
 
-    theme_counts = analyzed["predicted_theme"].value_counts()
-    most_common_theme = pretty_label(theme_counts.index[0])
+    filtered = apply_dashboard_filters(analyzed)
+    if filtered.empty:
+        st.warning("No articles match the current filters.")
+        return
 
-    confidence = pd.to_numeric(analyzed["theme_confidence"], errors="coerce")
-    mean_confidence = confidence.mean()
+    show_kpis(filtered)
 
-    uncertainty = analyzed["theme_uncertain"].fillna(False).astype(bool)
-    coverage = 1 - uncertainty.mean()
+    st.markdown('<div class="nm-section">Theme landscape</div>', unsafe_allow_html=True)
+    show_theme_visuals(filtered)
 
-    mean_bias = pd.to_numeric(
-        analyzed["mean_bias_probability"], errors="coerce"
-    ).mean()
+    st.markdown('<div class="nm-section">Bias landscape</div>', unsafe_allow_html=True)
+    show_bias_visuals(filtered)
 
-    entity_total = pd.to_numeric(
-        analyzed["ner_entity_count"], errors="coerce"
-    ).sum()
-
-    st.markdown('<div class="nm-section">Corpus overview</div>', unsafe_allow_html=True)
-
-    row1 = st.columns(4)
-    row1[0].metric("Analyzed articles", len(analyzed))
-    row1[1].metric("Most common theme", most_common_theme)
-    row1[2].metric("Theme coverage", f"{coverage:.1%}")
-    row1[3].metric("Mean theme confidence", f"{mean_confidence:.1%}")
-
-    row2 = st.columns(4)
-    row2[0].metric("Average bias probability", f"{mean_bias:.1%}")
-    row2[1].metric("Uncertain themes", int(uncertainty.sum()))
-    row2[2].metric("Extracted entities", int(entity_total))
-    row2[3].metric("Avg. entities/article", f"{entity_total / len(analyzed):.1f}")
-
-    chart_col1, chart_col2 = st.columns([1.35, 1])
-
-    with chart_col1:
-        st.markdown('<div class="nm-section">Theme distribution</div>', unsafe_allow_html=True)
-        theme_chart = theme_counts.rename_axis("Theme").to_frame("Articles")
-        theme_chart.index = [pretty_label(value) for value in theme_chart.index]
-        st.bar_chart(theme_chart)
-
-    with chart_col2:
-        st.markdown('<div class="nm-section">Theme quality</div>', unsafe_allow_html=True)
-        quality_table = pd.DataFrame(
-            {
-                "Measure": [
-                    "Above confidence threshold",
-                    "Below confidence threshold",
-                    "Mean confidence",
-                ],
-                "Value": [
-                    f"{coverage:.1%}",
-                    f"{uncertainty.mean():.1%}",
-                    f"{mean_confidence:.1%}",
-                ],
-            }
-        )
-        st.dataframe(quality_table, hide_index=True, use_container_width=True)
-        st.caption(
-            "Coverage refers to model predictions above the calibrated theme "
-            "confidence threshold; it is not an accuracy estimate."
-        )
-
-    st.markdown('<div class="nm-section">Entity prominence</div>', unsafe_allow_html=True)
-    entity_col1, entity_col2, entity_col3 = st.columns(3)
-
-    with entity_col1:
-        show_top_entities("Top persons", get_top_entities(analyzed["persons"]))
-    with entity_col2:
-        show_top_entities("Top organizations", get_top_entities(analyzed["organizations"]))
-    with entity_col3:
-        show_top_entities("Top locations", get_top_entities(analyzed["locations"]))
-
-    show_time_trends(analyzed)
+    show_time_visuals(filtered)
+    show_entity_visuals(filtered)
+    show_article_explorer(filtered)
 
 
 with st.sidebar:
-    st.markdown("## NewsMosaic")
-    st.caption("Research-oriented news corpus analysis")
-    st.divider()
-    st.markdown("**Models**")
-    st.write("Theme · RoBERTa")
-    st.write("Bias · ModernBERT")
-    st.write("NER · BERT")
-    st.divider()
-    st.markdown("**Online demo safeguards**")
-    st.write(f"Up to {Config.MAX_CORPUS_ARTICLES} articles")
-    st.write(f"Up to {Config.MAX_UPLOAD_MB} MB per CSV")
-    st.write(f"Up to {Config.MAX_ARTICLE_CHARS:,} characters/article")
-    st.divider()
-    st.caption(
-        "Larger corpora should be processed with the offline pipeline."
+    st.markdown(
+        """
+        <div class="nm-brand">
+            <div class="nm-logo"></div>
+            <div><div class="nm-brand-name">NewsMosaic</div><div style="font-size:.76rem;color:#7b8497">Research dashboard</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+    st.divider()
+    st.markdown("**Analysis stack**")
+    st.caption("THEME")
+    st.write("RoBERTa · 16 classes")
+    st.caption("BIAS")
+    st.write("ModernBERT · sentence-level")
+    st.caption("NER")
+    st.write("BERT · PER / ORG / LOC / MISC")
+    st.divider()
+    st.markdown("**Online demo limits**")
+    st.write(f"{Config.MAX_CORPUS_ARTICLES} articles / run")
+    st.write(f"{Config.MAX_UPLOAD_MB} MB CSV")
+    st.write(f"{Config.MAX_ARTICLE_CHARS:,} chars / article")
+    st.caption("Large research corpora should use the offline batch pipeline.")
 
 
 st.markdown(
-    """
+    f"""
     <div class="nm-hero">
-        <div class="nm-kicker">One corpus · Three NLP tasks · One workflow</div>
+        <div class="nm-kicker">Research-oriented news intelligence</div>
         <h1>NewsMosaic</h1>
         <p>
-            Analyze English news with theme classification, linguistic bias detection,
-            and named entity recognition. Inspect individual articles or enrich a small
-            research corpus directly in the browser.
+            Turn English news into an explorable research view. Classify themes, estimate
+            linguistic bias signals, extract named entities, compare years, filter sources,
+            inspect individual articles, and export the enriched corpus.
         </p>
+        <div class="nm-badges">
+            <span class="nm-badge">Theme classification</span>
+            <span class="nm-badge">Bias analysis</span>
+            <span class="nm-badge">Named entities</span>
+            <span class="nm-badge">Interactive corpus dashboard</span>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 single_tab, corpus_tab, methodology_tab = st.tabs(
-    ["Single Article", "Corpus Analysis", "Methodology"]
+    ["Single Article", "Corpus Dashboard", "Methodology"]
 )
 
 
@@ -423,8 +890,7 @@ with single_tab:
     single_too_long = char_count > Config.MAX_ARTICLE_CHARS
     if single_too_long:
         st.error(
-            f"This article exceeds the online demo limit of "
-            f"{Config.MAX_ARTICLE_CHARS:,} characters."
+            f"This article exceeds the online demo limit of {Config.MAX_ARTICLE_CHARS:,} characters."
         )
 
     analyze_button = st.button(
@@ -465,23 +931,19 @@ with single_tab:
 
 
 with corpus_tab:
-    st.subheader("Corpus Analysis")
+    st.subheader("Corpus Dashboard")
     st.caption(
-        "Upload a CSV, choose the article-text column, validate the file, "
-        "and export an enriched corpus."
+        "Upload a CSV, validate it, run the three NLP tasks, then explore the results with interactive filters and charts."
     )
 
-    st.info(
-        f"Online demo: up to {Config.MAX_CORPUS_ARTICLES} rows, "
-        f"{Config.MAX_UPLOAD_MB} MB per CSV, and "
-        f"{Config.MAX_ARTICLE_CHARS:,} characters per article."
+    st.markdown(
+        f'<div class="nm-note">Online demo capacity: up to <b>{Config.MAX_CORPUS_ARTICLES} articles</b>, '
+        f'<b>{Config.MAX_UPLOAD_MB} MB</b> per CSV, and <b>{Config.MAX_ARTICLE_CHARS:,} characters</b> per article. '
+        f'Invalid rows stay in the export but are not sent to the models.</div>',
+        unsafe_allow_html=True,
     )
 
-    uploaded_file = st.file_uploader(
-        "Upload CSV",
-        type=["csv"],
-        key="corpus_file",
-    )
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="corpus_file")
 
     if uploaded_file is not None:
         file_size_mb = uploaded_file.size / (1024 * 1024)
@@ -489,8 +951,7 @@ with corpus_tab:
 
         if file_too_large:
             st.error(
-                f"This file is {file_size_mb:.2f} MB. The online demo limit is "
-                f"{Config.MAX_UPLOAD_MB} MB."
+                f"This file is {file_size_mb:.2f} MB. The online demo limit is {Config.MAX_UPLOAD_MB} MB."
             )
             corpus_df = None
         else:
@@ -509,27 +970,19 @@ with corpus_tab:
             file_cols[0].metric("Rows", row_count)
             file_cols[1].metric("Columns", column_count)
             file_cols[2].metric("File size", f"{file_size_mb:.2f} MB")
-            file_cols[3].metric("Row limit", Config.MAX_CORPUS_ARTICLES)
+            file_cols[3].metric("Demo limit", Config.MAX_CORPUS_ARTICLES)
 
             if row_count == 0:
                 st.error("The uploaded CSV is empty.")
             elif row_count > Config.MAX_CORPUS_ARTICLES:
                 st.error(
-                    f"This file has {row_count} rows. The online demo accepts "
-                    f"at most {Config.MAX_CORPUS_ARTICLES} rows."
+                    f"This file has {row_count} rows. The online demo accepts at most {Config.MAX_CORPUS_ARTICLES} rows."
                 )
             elif column_count == 0:
                 st.error("No columns were found in the uploaded CSV.")
             else:
-                likely_text_columns = [
-                    "text",
-                    "plain_text",
-                    "article",
-                    "article_text",
-                    "content",
-                ]
+                likely_text_columns = ["text", "plain_text", "article", "article_text", "content"]
                 default_index = 0
-
                 for candidate in likely_text_columns:
                     if candidate in corpus_df.columns:
                         default_index = list(corpus_df.columns).index(candidate)
@@ -547,14 +1000,13 @@ with corpus_tab:
                 valid_count = row_count - empty_text_count - too_long_count
 
                 validation_cols = st.columns(3)
-                validation_cols[0].metric("Ready for analysis", valid_count)
+                validation_cols[0].metric("Ready", valid_count)
                 validation_cols[1].metric("Empty text", int(empty_text_count))
                 validation_cols[2].metric("Too long", int(too_long_count))
 
                 if empty_text_count or too_long_count:
                     st.warning(
-                        "Invalid rows are preserved in the exported corpus but are not "
-                        "sent to the NLP models. Their analysis_status explains why."
+                        "Invalid rows are preserved in the exported corpus but are not sent to the NLP models."
                     )
                 else:
                     st.success("Validation passed. All rows are ready for analysis.")
@@ -598,11 +1050,11 @@ with corpus_tab:
         corpus_result = st.session_state["corpus_result"]
 
         st.divider()
-        st.subheader("Corpus Results")
+        st.subheader("Interactive Results")
         show_corpus_dashboard(corpus_result)
 
-        st.markdown('<div class="nm-section">Article explorer</div>', unsafe_allow_html=True)
-        st.dataframe(corpus_result, use_container_width=True)
+        st.markdown('<div class="nm-section">Enriched dataset</div>', unsafe_allow_html=True)
+        st.dataframe(corpus_result, use_container_width=True, hide_index=True)
 
         csv_data = corpus_result.to_csv(index=False).encode("utf-8")
         st.download_button(
@@ -617,38 +1069,34 @@ with corpus_tab:
 with methodology_tab:
     st.subheader("Methodology & interpretation")
     st.write(
-        "NewsMosaic combines three supervised NLP tasks. Model outputs are "
-        "predictions designed for research exploration, not verified factual judgments."
+        "NewsMosaic combines three supervised NLP tasks. Model outputs are predictions designed for research exploration, not verified factual judgments."
     )
 
     m1, m2, m3 = st.columns(3)
     with m1:
         st.markdown("**Theme classification**")
-        st.write("16-class RoBERTa classifier.")
+        st.write("16-class RoBERTa classifier")
         st.write(f"Confidence threshold: {Config.THEME_THRESHOLD:.3f}")
         st.caption("Predictions below the threshold are marked uncertain.")
     with m2:
         st.markdown("**Linguistic bias**")
-        st.write("Sentence-level ModernBERT classifier.")
+        st.write("Sentence-level ModernBERT classifier")
         st.write(f"Sentence threshold: {Config.BIAS_THRESHOLD}")
         st.caption("Article scores aggregate sentence-level model probabilities.")
     with m3:
         st.markdown("**Named entities**")
-        st.write("BERT token-classification model.")
+        st.write("BERT token-classification model")
         st.write("PER · ORG · LOC · MISC")
         st.caption("Entities are deduplicated within each article.")
 
-    st.divider()
-    st.markdown("**Important interpretation note**")
-    st.write(
-        "Theme coverage is the share of predictions above the calibrated confidence "
-        "threshold. It should not be interpreted as model accuracy. Bias outputs are "
-        "model-estimated linguistic bias probabilities, not claims that an article or "
-        "publisher is objectively biased."
+    st.markdown('<div class="nm-section">Interpretation guardrails</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="nm-note"><b>Theme coverage</b> is the share of predictions above the calibrated confidence threshold; '
+        'it is not an accuracy estimate. <b>Bias outputs</b> are model-estimated linguistic bias probabilities; they are not '
+        'claims that an article or publisher is objectively biased.</div>',
+        unsafe_allow_html=True,
     )
 
 
 st.divider()
-st.caption(
-    "NewsMosaic · Academic prototype · English-language news analysis"
-)
+st.caption("NewsMosaic · Academic prototype · English-language news analysis")
