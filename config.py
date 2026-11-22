@@ -23,4 +23,7 @@ class Config:
     MIN_SENTENCE_CHARS = 10
     MAX_SENTENCES_PER_ARTICLE = 300
 
+    # Public Streamlit demo safeguards.
     MAX_CORPUS_ARTICLES = 25
+    MAX_UPLOAD_MB = 5
+    MAX_ARTICLE_CHARS = 20000

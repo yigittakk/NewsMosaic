@@ -31,6 +31,7 @@ class CorpusAnalyzer:
     def analyze(self, dataframe, text_column, progress_callback=None):
         """
         Returns a copy of the input dataframe enriched with NLP outputs.
+        Empty and over-length articles are preserved but not analyzed.
         """
 
         if text_column not in dataframe.columns:
@@ -49,19 +50,27 @@ class CorpusAnalyzer:
 
         cleaned_texts = []
         valid_positions = []
+        row_statuses = []
 
         for position, value in enumerate(result[text_column].tolist()):
             text = "" if pd.isna(value) else str(value)
             text = self.text_processor.clean_text(text)
             cleaned_texts.append(text)
 
-            if text:
+            if not text:
+                row_statuses.append("empty_text")
+            elif len(text) > Config.MAX_ARTICLE_CHARS:
+                row_statuses.append("too_long")
+            else:
+                row_statuses.append("ready")
                 valid_positions.append(position)
 
         if not valid_positions:
-            raise ValueError("No non-empty article text was found.")
+            raise ValueError(
+                "No article passed validation. Check empty text and article length limits."
+            )
 
-        result["analysis_status"] = "empty_text"
+        result["analysis_status"] = row_statuses
         result["predicted_theme"] = None
         result["theme_confidence"] = None
         result["theme_uncertain"] = None
@@ -84,9 +93,6 @@ class CorpusAnalyzer:
                     message,
                 )
 
-        # --------------------------------------------------
-        # Theme classification
-        # --------------------------------------------------
         report("Loading theme model...")
 
         theme_classifier = ThemeClassifier(
@@ -98,18 +104,9 @@ class CorpusAnalyzer:
         for article_number, position in enumerate(valid_positions, start=1):
             prediction = theme_classifier.predict(cleaned_texts[position])
 
-            result.iat[
-                position,
-                result.columns.get_loc("predicted_theme"),
-            ] = prediction["theme"]
-            result.iat[
-                position,
-                result.columns.get_loc("theme_confidence"),
-            ] = prediction["theme_confidence"]
-            result.iat[
-                position,
-                result.columns.get_loc("theme_uncertain"),
-            ] = prediction["theme_uncertain"]
+            result.iat[position, result.columns.get_loc("predicted_theme")] = prediction["theme"]
+            result.iat[position, result.columns.get_loc("theme_confidence")] = prediction["theme_confidence"]
+            result.iat[position, result.columns.get_loc("theme_uncertain")] = prediction["theme_uncertain"]
 
             completed_steps += 1
             report(
@@ -120,9 +117,6 @@ class CorpusAnalyzer:
         del theme_classifier
         self.clear_memory()
 
-        # --------------------------------------------------
-        # Linguistic bias
-        # --------------------------------------------------
         report("Loading bias model...")
 
         bias_classifier = BiasClassifier(
@@ -137,18 +131,9 @@ class CorpusAnalyzer:
         for article_number, position in enumerate(valid_positions, start=1):
             prediction = bias_classifier.predict(cleaned_texts[position])
 
-            result.iat[
-                position,
-                result.columns.get_loc("mean_bias_probability"),
-            ] = prediction["mean_bias_probability"]
-            result.iat[
-                position,
-                result.columns.get_loc("bias_ratio_0705"),
-            ] = prediction["bias_ratio"]
-            result.iat[
-                position,
-                result.columns.get_loc("bias_sentence_count"),
-            ] = prediction["bias_sentence_count"]
+            result.iat[position, result.columns.get_loc("mean_bias_probability")] = prediction["mean_bias_probability"]
+            result.iat[position, result.columns.get_loc("bias_ratio_0705")] = prediction["bias_ratio"]
+            result.iat[position, result.columns.get_loc("bias_sentence_count")] = prediction["bias_sentence_count"]
 
             completed_steps += 1
             report(
@@ -159,9 +144,6 @@ class CorpusAnalyzer:
         del bias_classifier
         self.clear_memory()
 
-        # --------------------------------------------------
-        # Named Entity Recognition
-        # --------------------------------------------------
         report("Loading NER model...")
 
         ner_extractor = NERExtractor(
@@ -174,30 +156,12 @@ class CorpusAnalyzer:
         for article_number, position in enumerate(valid_positions, start=1):
             prediction = ner_extractor.predict(cleaned_texts[position])
 
-            result.iat[
-                position,
-                result.columns.get_loc("persons"),
-            ] = " | ".join(prediction["persons"])
-            result.iat[
-                position,
-                result.columns.get_loc("organizations"),
-            ] = " | ".join(prediction["organizations"])
-            result.iat[
-                position,
-                result.columns.get_loc("locations"),
-            ] = " | ".join(prediction["locations"])
-            result.iat[
-                position,
-                result.columns.get_loc("misc_entities"),
-            ] = " | ".join(prediction["misc_entities"])
-            result.iat[
-                position,
-                result.columns.get_loc("ner_entity_count"),
-            ] = prediction["ner_entity_count"]
-            result.iat[
-                position,
-                result.columns.get_loc("analysis_status"),
-            ] = "analyzed"
+            result.iat[position, result.columns.get_loc("persons")] = " | ".join(prediction["persons"])
+            result.iat[position, result.columns.get_loc("organizations")] = " | ".join(prediction["organizations"])
+            result.iat[position, result.columns.get_loc("locations")] = " | ".join(prediction["locations"])
+            result.iat[position, result.columns.get_loc("misc_entities")] = " | ".join(prediction["misc_entities"])
+            result.iat[position, result.columns.get_loc("ner_entity_count")] = prediction["ner_entity_count"]
+            result.iat[position, result.columns.get_loc("analysis_status")] = "analyzed"
 
             completed_steps += 1
             report(
