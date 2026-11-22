@@ -1,109 +1,102 @@
 # NewsMosaic
 
-**NewsMosaic** is a research-oriented web application for analysing English news at both article and corpus level. It combines three supervised NLP tasks in one workflow: **theme classification**, **linguistic bias detection**, and **Named Entity Recognition (NER)**.
+**NewsMosaic** is a research-oriented multipage web application for analysing English news at article and corpus level. It combines three supervised NLP tasks in one workflow: **theme classification**, **linguistic bias detection**, and **Named Entity Recognition (NER)**.
 
-The application is designed as an academic functional prototype: users can upload a structured news corpus, validate it, run the final NLP models, inspect individual articles, explore corpus-level patterns through an interactive dashboard, and export an enriched version of the original data.
+Developed by **Yiğit Ak** at the **University of Bologna** for the **Machine Learning for Humanities** course.
 
-> **Status:** functional MVP · inference-only deployment · English news corpora
+> Functional academic MVP · inference-only deployment · English news corpora
 
-## What NewsMosaic does
+## Application pages
 
-The core workflow is:
+NewsMosaic uses Streamlit's native multipage navigation rather than a tab-based single page.
+
+- **Home** — project landing page, workflow, model suite, and academic context.
+- **Single Article** — paste one article and run Theme + Bias + NER.
+- **Corpus Analysis** — upload, validate, analyse, and export a CSV corpus.
+- **Dashboard** — explore the latest analysed corpus without rerunning the models.
+- **Methodology** — processing pipeline, model cards, interpretation guidance, and system design.
+- **About** — developer information, academic context, project scope, and repository links.
+
+## Core workflow
 
 **Upload → Validate → Analyse → Aggregate → Explore → Export**
 
-NewsMosaic supports:
-
-- single-article analysis;
-- structured CSV corpus upload and validation;
-- theme classification across 16 news categories;
-- sentence-level linguistic bias scoring aggregated to article level;
-- extraction of persons, organizations, locations, and miscellaneous entities;
-- explicit uncertainty flags for low-confidence theme predictions;
-- interactive filtering by theme, year, source, confidence, bias score, and certainty;
-- corpus-level theme, bias, entity, and time-trend visualizations;
-- article-level drill-down inside the dashboard;
-- export of an enriched CSV while preserving the original input columns.
+For corpus analysis, the three transformer models are loaded **sequentially**. One model processes all valid articles, is released from memory, and then the next model is loaded. This design reduces memory pressure on the public Streamlit deployment.
 
 ## Final NLP models
 
-The deployed application uses previously trained and validated models hosted on Hugging Face. The web app performs **inference only**; it does not train or fine-tune models at runtime.
-
-| Task | Final model | Main evaluation result | Inference behaviour |
+| Task | Final model | Main evaluation result | Deployed behaviour |
 |---|---|---:|---|
-| Theme classification | RoBERTa | Macro-F1 **0.8354** | 16 classes; predictions below **0.6344** confidence are flagged as uncertain |
-| Linguistic bias detection | ModernBERT | Macro-F1 **0.8288** | sentence-level bias probability; article mean plus ratio above **0.705** |
+| Theme classification | RoBERTa | Macro-F1 **0.8354** | 16 classes; confidence below **0.6344** is flagged as uncertain |
+| Linguistic bias detection | ModernBERT | Macro-F1 **0.8288** | sentence probabilities aggregated to article mean + ratio above **0.705** |
 | Named Entity Recognition | `bert-base-cased` | Entity-level F1 **0.8893** | PER / ORG / LOC / MISC extraction |
 
-Hugging Face model repositories:
+Model repositories:
 
 - Theme: <https://huggingface.co/yigittoud/newsmosaic-theme>
 - Bias: <https://huggingface.co/yigittoud/newsmosaic-bias>
 - NER: <https://huggingface.co/yigittoud/newsmosaic-ner>
 
-### Important interpretation note
+## Dashboard design
 
-All outputs are **model estimates**. Theme labels should not be treated as human gold labels. The bias component measures lexical/linguistic signals learned from supervised data; it does **not** determine whether an article is factually correct, politically fair, or intentionally misleading. NER results depend on the entity types and conventions learned during fine-tuning.
+The dashboard is deliberately focused rather than chart-heavy. A single view selector switches between:
 
-## Focused corpus dashboard
+- **Overview** — leading theme, coverage, bias signal, most visible entity, quality status, and corpus snapshot.
+- **Themes** — ranked horizontal theme distribution and supporting confidence/uncertainty table.
+- **Bias** — article-level bias probability distribution with mean/median summaries.
+- **Entities** — top persons, organizations, or locations, one entity type at a time.
+- **Trends** — time-based summaries when year/date metadata is available.
+- **Articles** — searchable article-level drill-down with metadata, predictions, entities, and original text.
 
-The dashboard is intentionally divided into focused views instead of showing every chart at once. Filters update the views without rerunning the NLP models.
+Filters change the dashboard view without rerunning model inference.
 
-- **Overview** — leading theme, theme coverage, mean bias signal, most visible entity, quality status, and a compact article snapshot.
-- **Themes** — ranked horizontal theme distribution plus a supporting table with share, mean confidence, and uncertainty counts.
-- **Bias** — article-level bias probability distribution with mean/median summaries and the mean sentence bias ratio.
-- **Entities** — separate top-N views for persons, organizations, and locations.
-- **Trends** — yearly bias line chart and a compact heatmap of the most frequent theme shares when year/date metadata is available.
-- **Articles** — searchable article drill-down with metadata, model outputs, named entities, and original text.
+## Interpretation
 
-The visual design prioritizes comparison and interpretation over chart quantity: categorical rankings use horizontal bars, distributions use histograms, ordered temporal signals use lines, and cross-year theme composition uses a heatmap rather than a crowded stacked chart.
+All outputs are **model estimates**.
 
-
-## In-app methodology
-
-The **Methods & model cards** area is organized as a product-facing explanation rather than a long technical appendix:
-
-1. **Pipeline** explains the five-stage workflow from validation to enriched export.
-2. **Model cards** summarize each deployed model, its task, evaluation metric, threshold, and output.
-3. **Interpretation** states what theme confidence, linguistic bias, and NER outputs do and do not mean.
-4. **System design** documents the inference architecture, sequential model loading, deployment limits, and the boundary between the public demo and the offline large-corpus pipeline.
+- Theme predictions are not human gold labels. Low-confidence predictions are explicitly marked as uncertain.
+- Bias is a **lexical/linguistic signal** learned from supervised data. It is not a fact-check, truth score, or political verdict.
+- NER outputs depend on the entity taxonomy and conventions learned during fine-tuning.
 
 ## Input format
 
 ### Single article
 
-Paste one English news article into the **Single Article** tab.
+Paste one English news article into the **Single Article** page.
 
 ### Corpus
 
-Upload a CSV file. A text column is required and can be selected in the interface. Common accepted names include:
+Upload a CSV and select the article-text column. Common names include:
 
-- `text`
-- `plain_text`
-- `article`
-- `article_text`
-- `content`
+```text
+text
+plain_text
+article
+article_text
+content
+```
 
-Optional metadata such as `id`, `title`, `date`, `year`, `source`, `publisher`, or categories can be retained and used by the dashboard when available.
+Optional metadata such as `id`, `title`, `date`, `year`, `source`, `publisher`, and categories are preserved and can support dashboard exploration.
 
-### Public demo safeguards
+## Public demo safeguards
 
-The Streamlit Community Cloud deployment intentionally limits the online demo to:
+The Streamlit Community Cloud version intentionally limits online workloads to:
 
-- **25 articles per corpus**;
-- **5 MB maximum CSV size**;
-- **20,000 characters per article**;
-- English-language news.
+- **25 articles per corpus**
+- **5 MB maximum CSV size**
+- **20,000 characters per article**
+- English-language news
 
-These are deployment safeguards for a free public demo, not limits of the research pipeline itself. Large corpora should be processed through the offline batch workflow.
+These are deployment safeguards, not limits of the research pipeline. Larger corpora should be processed through the offline batch workflow.
 
-Invalid or unsupported rows are preserved in the exported data and can be marked with statuses such as `empty_text` or `too_long` rather than being silently discarded.
+Rows with empty or over-length text are preserved in the enriched export and marked with an `analysis_status` rather than being silently removed.
 
 ## Enriched output
 
-Depending on the analysis, NewsMosaic adds fields such as:
+NewsMosaic preserves original columns and can add:
 
 ```text
+analysis_status
 predicted_theme
 theme_confidence
 theme_uncertain
@@ -115,51 +108,50 @@ organizations
 locations
 misc_entities
 ner_entity_count
-analysis_status
 ```
-
-The original corpus columns are preserved.
 
 ## System architecture
 
 ```text
-User browser
-    |
-    v
-Streamlit interface
-    |
-    +--> Single Article Analysis
-    |
-    +--> Corpus Upload + Validation
-             |
-             v
-        Corpus Analyzer
-             |
-             +--> ThemeClassifier  --> Hugging Face model
-             +--> BiasClassifier   --> Hugging Face model
-             +--> NERExtractor     --> Hugging Face model
-             |
-             v
-        Aggregation + Dashboard
-             |
-             v
-        Enriched CSV Export
+Browser
+  ↓
+Streamlit multipage interface
+  ├── Home
+  ├── Single Article
+  ├── Corpus Analysis
+  ├── Dashboard
+  ├── Methodology
+  └── About
+        ↓
+NewsAnalyzer / CorpusAnalyzer
+        ↓
+ThemeClassifier → BiasClassifier → NERExtractor
+        ↓
+Public Hugging Face model repositories
+        ↓
+Interactive exploration + enriched export
 ```
-
-To keep memory usage manageable on the public deployment, the three transformer models are loaded **sequentially** for corpus processing rather than being kept in memory simultaneously.
 
 ## Repository structure
 
 ```text
 NewsMosaic/
-├── streamlit_app.py          # Streamlit interface and dashboard
-├── corpus_analyzer.py        # Corpus-level orchestration
-├── news_analyzer.py          # Single-article orchestration
-├── config.py                 # Model IDs, thresholds, and demo limits
+├── streamlit_app.py            # Multipage router
+├── ui_components.py            # Shared styles, dashboard, and UI helpers
+├── corpus_analyzer.py          # Corpus-level orchestration
+├── news_analyzer.py            # Single-article orchestration
+├── config.py                   # Model IDs, thresholds, and demo limits
 ├── requirements.txt
 ├── README.md
+├── app_pages/
+│   ├── home.py
+│   ├── single_article.py
+│   ├── corpus_analysis.py
+│   ├── dashboard.py
+│   ├── methodology.py
+│   └── about.py
 ├── .streamlit/
-│   └── config.toml           # Light theme and Streamlit configuration
+│   └── config.toml
 ├── models/
 │   ├── theme_classifier.py
 │   ├── bias_classifier.py
@@ -170,9 +162,7 @@ NewsMosaic/
 
 ## Local setup
 
-A clean Python 3.11 environment is recommended.
-
-### Conda
+Python 3.11 is recommended.
 
 ```bash
 conda create -n newsmosaic python=3.11 -y
@@ -181,84 +171,40 @@ python -m pip install -r requirements.txt
 python -m streamlit run streamlit_app.py
 ```
 
-### Standard Python environment
+## Streamlit deployment
 
-```bash
-python -m pip install -r requirements.txt
-python -m streamlit run streamlit_app.py
-```
-
-The application will normally be available at `http://localhost:8501`.
-
-## Deployment
-
-The public app is designed for **Streamlit Community Cloud**:
+For Streamlit Community Cloud:
 
 1. connect the GitHub repository;
 2. use the `main` branch;
 3. set `streamlit_app.py` as the entry point;
-4. use Python 3.11;
-5. deploy the public app.
+4. select Python 3.11;
+5. deploy.
 
-The final models are downloaded from their public Hugging Face repositories. No model-training credentials or API keys are required by the current inference-only application.
+The app downloads its public final models from Hugging Face and performs inference only. No model-training credentials are required.
 
-## Research context
+## Project scope
 
-NewsMosaic was designed around comparative supervised analysis of English news corpora, with CCNews used as the target news corpus. The system supports article-level analysis and corpus-level aggregation across time and available metadata.
+The current application includes structured corpus upload and validation, Theme/Bias/NER analysis, uncertainty and data-quality warnings, corpus-level exploration, article inspection, and enriched export.
 
-The application scope includes structured corpus upload, validation, Theme/Bias/NER analysis, interactive exploration, uncertainty/data-quality warnings, and enriched export.
-
-The following remain outside the current project scope:
+Outside the current scope:
 
 - automatic news collection;
 - real-time monitoring;
 - fact-checking;
 - misinformation detection;
-- training custom models inside the web application;
+- training custom models inside the application;
 - unrestricted multilingual analysis.
 
 ## Scaling beyond the public demo
 
-The current Streamlit deployment is intentionally small and synchronous. A production-oriented version for larger or concurrent workloads would separate the UI from inference and add infrastructure such as:
+A production-oriented version for larger or concurrent workloads would separate the UI from inference and add background jobs, persistent storage, dedicated model-serving workers/endpoints, job status, authentication, monitoring, and larger-corpus queue management.
 
-- background job processing;
-- persistent object/file storage;
-- model-serving workers or dedicated inference endpoints;
-- job status and resumable processing;
-- authentication and per-user workspaces;
-- larger-corpus batching and queue management;
-- monitoring and deployment observability.
+## Author
 
-The research pipeline can therefore remain reproducible while the public demo stays lightweight and safe.
-
-## Author & academic context
-
-<table>
-<tr>
-<td width="150" valign="top">
-<a href="https://github.com/yigittakk">
-<img src="https://github.com/yigittakk.png?size=160" width="120" alt="Yiğit Ak">
-</a>
-</td>
-<td valign="top">
-
-### Yiğit Ak
-
-Developer of **NewsMosaic**  
+**Yiğit Ak**  
 University of Bologna  
-**Machine Learning for Humanities** · 2026
+Machine Learning for Humanities · 2026
 
-NewsMosaic was developed as an academic machine-learning project for the University of Bologna's *Machine Learning for Humanities* course. The project combines supervised NLP model development with a deployable research-oriented application for English news corpus analysis.
-
-- GitHub: [@yigittakk](https://github.com/yigittakk)
-- Source repository: [yigittakk/NewsMosaic](https://github.com/yigittakk/NewsMosaic)
-
-</td>
-</tr>
-</table>
-
-## Project
-
-**NewsMosaic – A Research-Oriented Platform for News Corpus Analysis**  
-Developed by **Yiğit Ak**  
-University of Bologna · Machine Learning for Humanities · 2026
+GitHub: <https://github.com/yigittakk>  
+Repository: <https://github.com/yigittakk/NewsMosaic>
