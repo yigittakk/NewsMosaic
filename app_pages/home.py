@@ -40,37 +40,41 @@ with right:
     )
 
 st.markdown('<div class="nm-section">Three coordinated models</div>', unsafe_allow_html=True)
-st.markdown(
-    """
-    <div class="nm-method-grid">
-        <div class="nm-method-card">
-            <div class="nm-method-tag">THEME</div>
-            <div class="nm-method-title">RoBERTa classifier</div>
-            <div class="nm-method-sub">16 news themes</div>
-            <div class="nm-stat-row"><span>Test Macro-F1</span><span>0.8354</span></div>
-            <div class="nm-stat-row"><span>Confidence threshold</span><span>0.6344</span></div>
-            <div class="nm-stat-row"><span>Low confidence</span><span>Flagged uncertain</span></div>
-        </div>
-        <div class="nm-method-card">
-            <div class="nm-method-tag">BIAS</div>
-            <div class="nm-method-title">ModernBERT classifier</div>
-            <div class="nm-method-sub">Sentence-level linguistic signal</div>
-            <div class="nm-stat-row"><span>Test Macro-F1</span><span>0.8288</span></div>
-            <div class="nm-stat-row"><span>Sentence threshold</span><span>0.705</span></div>
-            <div class="nm-stat-row"><span>Article output</span><span>Mean + ratio</span></div>
-        </div>
-        <div class="nm-method-card">
-            <div class="nm-method-tag">NER</div>
-            <div class="nm-method-title">BERT token classifier</div>
-            <div class="nm-method-sub">PER · ORG · LOC · MISC</div>
-            <div class="nm-stat-row"><span>Entity-level F1</span><span>0.8893</span></div>
-            <div class="nm-stat-row"><span>Output</span><span>Deduplicated entities</span></div>
-            <div class="nm-stat-row"><span>Use</span><span>Actor prominence</span></div>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+
+model_theme, model_bias, model_ner = st.columns(3, gap="medium")
+
+with model_theme:
+    with st.container(border=True):
+        st.caption("THEME CLASSIFICATION")
+        st.markdown("### RoBERTa")
+        st.caption("16-class supervised news theme classifier")
+        a, b = st.columns(2)
+        a.metric("Test Macro-F1", "0.835")
+        b.metric("Threshold", "0.634")
+        st.markdown("**Output**  \nTheme label + confidence")
+        st.caption("Predictions below the calibrated confidence threshold are flagged as uncertain.")
+
+with model_bias:
+    with st.container(border=True):
+        st.caption("LINGUISTIC BIAS")
+        st.markdown("### ModernBERT")
+        st.caption("Sentence-level linguistic signal with article aggregation")
+        a, b = st.columns(2)
+        a.metric("Test Macro-F1", "0.829")
+        b.metric("Threshold", "0.705")
+        st.markdown("**Output**  \nMean probability + sentence ratio")
+        st.caption("The score reflects model-estimated lexical/linguistic bias, not a factual or political verdict.")
+
+with model_ner:
+    with st.container(border=True):
+        st.caption("NAMED ENTITY RECOGNITION")
+        st.markdown("### BERT base cased")
+        st.caption("CoNLL-2003 token classification")
+        a, b = st.columns(2)
+        a.metric("Entity F1", "0.889")
+        b.metric("Token accuracy", "0.970")
+        st.markdown("**Entities**  \nPER · ORG · LOC · MISC")
+        st.caption("Article-level entities are deduplicated for prominence analysis.")
 
 st.markdown('<div class="nm-section">Workflow</div>', unsafe_allow_html=True)
 st.markdown(

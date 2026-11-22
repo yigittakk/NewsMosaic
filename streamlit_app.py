@@ -8,7 +8,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-from ui_components import render_sidebar_footer
+from ui_components import inject_global_styles, render_sidebar_footer
 
 pages = {
     "NewsMosaic": [
@@ -23,6 +23,7 @@ pages = {
     ],
 }
 
+inject_global_styles()
 page = st.navigation(pages)
 render_sidebar_footer()
 page.run()

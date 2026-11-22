@@ -389,9 +389,6 @@ CUSTOM_CSS = """
 </style>
 """
 
-st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-
 PRODUCT_CSS = """
 <style>
     .nm-product-grid {
@@ -532,7 +529,12 @@ PRODUCT_CSS = """
     }
 </style>
 """
-st.markdown(PRODUCT_CSS, unsafe_allow_html=True)
+
+
+def inject_global_styles():
+    """Emit application CSS on every Streamlit rerun/page navigation."""
+    st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+    st.markdown(PRODUCT_CSS, unsafe_allow_html=True)
 
 
 @st.cache_resource
