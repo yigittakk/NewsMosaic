@@ -8,7 +8,7 @@ Developed by **Yiğit Ak** at the **University of Bologna** for the **Machine Le
 
 ## Application pages
 
-NewsMosaic uses Streamlit's native multipage navigation rather than a tab-based single page.
+NewsMosaic uses Streamlit's multipage router with a **custom persistent horizontal navigation bar** made with `st.page_link`; the built-in navigation menu is hidden. This replaces a tab-based single-page layout.
 
 - **Home** — project landing page, workflow, model suite, and academic context.
 - **Single Article** — paste one article and run Theme + Bias + NER.
@@ -41,16 +41,18 @@ Model repositories:
 
 The deployed models were trained and evaluated on labeled external datasets, while **CCNews 2020–2024** is primarily the target corpus for research analysis. Dataset roles were kept separate to avoid treating model-generated CCNews labels as supervised ground truth.
 
+**CCNews collection vs. analysis:** the raw collection sampled **100,000 English-language news records per year** for 2020–2024 (**500,000 raw records before cleaning and selection**). The final offline research analysis used **125,000 articles** (**25,000 per year**), **not all 500,000 raw records**. A separate non-holdout CCNews pool supplied metadata-derived weak labels for theme adaptation.
+
 | Task | Dataset | Role | Treatment |
 |---|---|---|---|
-| Theme | HuffPost + IAB-derived external theme data | Gold supervised training / validation / test | Labels were harmonized into the NewsMosaic theme taxonomy and fixed train/validation/test splits were created. |
+| Theme | HuffPost, IAB, AG News, NewsCatcher, and MN-DS | Supervised training / validation / test | Source labels were harmonized into the 16-class NewsMosaic taxonomy and the combined external corpus was deduplicated and split. |
 | Theme | Separate CCNews weak-label pool | Target-domain adaptation | Conservative labels were generated from metadata such as categories and tags. The fixed final inference corpus was excluded by exact-content hash. |
 | Bias | BABE | Fine-tuning / primary evaluation | ModernBERT was fine-tuned on sentence-level annotations; the decision threshold was calibrated on validation data only. |
 | Bias | MBIC | External robustness evaluation | Used to test out-of-dataset generalization; not used to fit the final model. |
 | NER | CoNLL-2003 | Fine-tuning / evaluation | `bert-base-cased` was fine-tuned for PER / ORG / LOC / MISC token classification. |
 | All tasks | Fixed CCNews reference corpus | Final target inference | 125,000 articles, balanced at 25,000 per year from 2020–2024, were analysed only after model selection. |
 
-For Theme classification, the final prepared external dataset contained **316,697** examples (253,357 train / 31,670 validation / 31,670 test). A separate weakly labeled CCNews pool produced **112,610** clean examples and was balanced to **53,551** examples for joint target-domain adaptation. A sequential adaptation experiment was rejected because it degraded external performance; the deployed model instead uses joint training with external gold data and weak CCNews data.
+For Theme classification, the final prepared external dataset contained **316,697** examples (253,357 train / 31,670 validation / 31,670 test). A separate weakly labeled CCNews pool produced **112,610** clean examples, from which a balanced subset of **53,551** was selected. The original joint-training script then made a **stratified 90% weak-training / 10% weak-validation split**: only the weak-training portion was combined with external supervised training data; the weak-validation portion was kept separate for evaluation. A sequential adaptation experiment was rejected because it degraded external performance; the deployed model instead uses joint training with external supervised data and this weak CCNews training portion.
 
 The final CCNews outputs are therefore **model estimates**, not human gold labels. Thresholds control decision/uncertainty behaviour and do not guarantee a fixed accuracy on CCNews.
 
@@ -229,5 +231,5 @@ Repository: <https://github.com/yigittakk/NewsMosaic>
 
 ## Navigation
 
-NewsMosaic uses Streamlit's native top navigation. The main pages are available directly from the horizontal menu: Home, Single Article, Corpus Analysis, Dashboard, Methodology, and About. The sidebar is optional and contains developer and online-demo information only.
+NewsMosaic uses Streamlit's multipage router with its built-in navigation hidden (`st.navigation(..., position="hidden")`). A custom horizontal menu created with `st.page_link` provides Home, Single Article, Corpus Analysis, Dashboard, Methodology, and About directly at the top of every page. The sidebar is optional and contains developer and online-demo information only.
 
