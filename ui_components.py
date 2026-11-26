@@ -840,7 +840,7 @@ def show_overview(filtered, source_result):
                 <div class="nm-insight-copy">Predictions above the calibrated confidence threshold.</div>
             </div>
             <div class="nm-insight-card">
-                <div class="nm-insight-label">Mean bias signal</div>
+                <div class="nm-insight-label">Mean bias probability</div>
                 <div class="nm-insight-value">{mean_bias:.1%}</div>
                 <div class="nm-insight-copy">Average article-level linguistic bias probability.</div>
             </div>
@@ -925,8 +925,8 @@ def show_bias_view(filtered):
     sentence_ratio = filtered["_bias_ratio"].mean()
 
     c1, c2, c3 = st.columns(3)
-    c1.metric("Mean article bias", f"{mean_bias:.1%}")
-    c2.metric("Median article bias", f"{median_bias:.1%}")
+    c1.metric("Mean Bias Probability", f"{mean_bias:.1%}")
+    c2.metric("Median Bias Probability", f"{median_bias:.1%}")
     c3.metric("Mean sentence bias ratio", f"{sentence_ratio:.1%}")
 
     bins = max(5, min(12, len(filtered)))
@@ -950,7 +950,7 @@ def show_bias_view(filtered):
     polish_figure(fig, height=430)
     st.plotly_chart(fig, use_container_width=True, config=plotly_config())
     st.markdown(
-        f'<div class="nm-note">Article mean bias is the average sentence-level bias probability. '
+        f'<div class="nm-note">Article mean bias probability is the average sentence-level model score (not the share of biased articles). '
         f'The sentence bias ratio separately reports the share of sentences scoring at or above {Config.BIAS_THRESHOLD}. '
         f'Neither measure evaluates factual accuracy or political truthfulness.</div>',
         unsafe_allow_html=True,
@@ -1123,15 +1123,24 @@ def methodology_data_strategy():
         unsafe_allow_html=True,
     )
 
+    st.markdown("#### Corpus collection and analysis scope")
+    st.write(
+        "The raw CCNews collection sampled 100,000 English-language records per year from "
+        "2020 to 2024 (500,000 raw records in total, before cleaning and selection). "
+        "The final offline research analysis used 125,000 articles (25,000 per year); "
+        "the full raw collection was not analysed with the three final models. "
+        "A separate non-holdout CCNews pool was used for metadata-derived theme weak supervision."
+    )
+
     st.markdown("#### Dataset roles")
     st.dataframe(
         pd.DataFrame(
             [
                 {
                     "Task": "Theme classification",
-                    "Dataset": "HuffPost + IAB-derived external theme data",
+                    "Dataset": "HuffPost, IAB, AG News, NewsCatcher, MN-DS",
                     "Role": "Gold supervised training / validation / test",
-                    "What we did": "Mapped source labels into the final NewsMosaic theme taxonomy, removed unusable rows, created fixed splits, and used the held-out test set only for final evaluation.",
+                    "What we did": "Harmonized labels from five external supervised sources into the final 16-class taxonomy, removed unusable or duplicate rows, and created train/validation/test splits. The external test split was reserved for evaluation.",
                 },
                 {
                     "Task": "Theme classification",
@@ -1174,8 +1183,9 @@ def methodology_data_strategy():
     with left:
         st.markdown(
             """
-            **External gold dataset**
+            **External supervised theme dataset**
 
+            - Sources: **HuffPost, IAB, AG News, NewsCatcher, MN-DS**
             - Final prepared dataset: **316,697 articles**
             - Train: **253,357**
             - Validation: **31,670**
@@ -1192,8 +1202,9 @@ def methodology_data_strategy():
             - CCNews metadata was used only for conservative weak labeling.
             - The fixed final 125k inference corpus was excluded by exact-content hash.
             - Clean weak-label pool: **112,610 articles**
-            - Balanced weak training subset: **53,551 articles**
-            - The final model used **gold external training data + weak CCNews training data**.
+            - Balanced weak-label subset: **53,551 articles**
+            - This subset was split **90% weak train / 10% weak validation** (stratified).
+            - Only the **weak-training portion** was combined with external supervised training data for the final joint model.
             """
         )
 
@@ -1266,7 +1277,7 @@ def methodology_interpretation():
         )
         st.markdown("#### Bias outputs")
         st.write(
-            "Bias is deliberately narrow: it represents lexical/linguistic signals learned from annotated sentences. The article mean averages sentence probabilities, while the sentence ratio counts sentences above the decision threshold."
+            "Bias is deliberately narrow: it represents lexical/linguistic signals learned from annotated sentences. The article mean averages sentence probabilities, while the sentence ratio measures the proportion of sentences above the decision threshold. These are model scores, not shares of objectively biased articles."
         )
     with col2:
         st.markdown("#### NER outputs")
