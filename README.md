@@ -213,10 +213,6 @@ Outside the current scope:
 - training custom models inside the application;
 - unrestricted multilingual analysis.
 
-## Scaling beyond the public demo
-
-A production-oriented version for larger or concurrent workloads would separate the UI from inference and add background jobs, persistent storage, dedicated model-serving workers/endpoints, job status, authentication, monitoring, and larger-corpus queue management.
-
 ## Author
 
 **Yiğit Ak**  
@@ -225,9 +221,3 @@ Machine Learning for Humanities · 2026
 
 GitHub: <https://github.com/yigittakk>  
 Repository: <https://github.com/yigittakk/NewsMosaic>
-
-
-## Navigation
-
-NewsMosaic uses Streamlit's multipage router with its built-in navigation hidden (`st.navigation(..., position="hidden")`). A custom horizontal menu created with `st.page_link` provides Home, Single Article, Corpus Analysis, Dashboard, Methodology, and About directly at the top of every page. The sidebar is optional and contains developer and online-demo information only.
-
