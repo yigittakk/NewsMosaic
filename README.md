@@ -8,8 +8,6 @@ Developed by **Yiğit Ak** at the **University of Bologna** for the **Machine Le
 
 ## Application pages
 
-NewsMosaic uses Streamlit's multipage router with a **custom persistent horizontal navigation bar** made with `st.page_link`; the built-in navigation menu is hidden. This replaces a tab-based single-page layout.
-
 - **Home** — project landing page, workflow, model suite, and academic context.
 - **Single Article** — paste one article and run Theme + Bias + NER.
 - **Corpus Analysis** — upload, validate, analyse, and export a CSV corpus.
